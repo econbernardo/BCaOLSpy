@@ -17,4 +17,4 @@ The BCa (Bias-Corrected and Accelerated) confidence interval is a non-parametric
 - Efron, B. (1982). The Jackknife, the Bootstrap, and Other Resampling Plans. Society for Industrial and Applied Mathematics.
 - Efron, B., & Tibshirani, R. (1987). Better Bootstrap Confidence Intervals. Journal of the American Statistical Association, 82(397), 171-185.
 - Hansen, B. E. (2020). Econometrics. Princeton University Press.
-- Zivot, E. (2021). [Introduction to Computational Finance and Financial Econometrics with R.](https://bookdown.org/compfinezbook/introcompfinr/) 
+- Zivot, E. (2021). Introduction to Computational Finance and Financial Econometrics with R.
