@@ -1,6 +1,6 @@
 # BCaOLSpy
 
-BCaOLSpy is a simple `statsmodels` wrapper that provides a convenient way to compute Bias-Corrected and Accelerated (BCa) confidence intervals for OLS regression estimates in Python.
+`BCaOLSpy` is a simple `statsmodels` wrapper that provides a convenient way to compute Bias-Corrected and Accelerated (BCa) confidence intervals for OLS regression estimates in Python.
 
 
 ## Overview
