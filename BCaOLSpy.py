@@ -55,18 +55,27 @@ class BiasCorrectedOLS:
         Returns:
         - bootstrap_distribution: dictionary of bootstrapped coefficients for each variable.
         """
-        coefs = {}
-        progress = tqdm(range(n_sim), desc=desc) if self.verbose else range(n_sim)
-        first_iter = True
-        for _ in progress:
-            bootstrap_df = self.df.sample(frac=1, replace=True)
+        # Run one iteration to get variable names and pre-allocate arrays
+        n = len(self.df)
+        bootstrap_indices = np.random.choice(n, size=n, replace=True)
+        bootstrap_df = self.df.iloc[bootstrap_indices]
+        model = sm.OLS.from_formula(self.formula, bootstrap_df, missing='drop').fit()
+        var_names = model.params.index.tolist()
+        n_vars = len(var_names)
+        
+        # Pre-allocate numpy arrays for better performance
+        coefs_array = np.zeros((n_sim, n_vars))
+        coefs_array[0] = model.params.values
+        
+        progress = tqdm(range(1, n_sim), desc=desc) if self.verbose else range(1, n_sim)
+        for i in progress:
+            bootstrap_indices = np.random.choice(n, size=n, replace=True)
+            bootstrap_df = self.df.iloc[bootstrap_indices]
             model = sm.OLS.from_formula(self.formula, bootstrap_df, missing='drop').fit()
-            boot_coef = model.params
-            if first_iter:
-                coefs = {var: [] for var in boot_coef.index}
-                first_iter = False
-            for var in boot_coef.index:
-                coefs[var].append(boot_coef[var])
+            coefs_array[i] = model.params.values
+        
+        # Convert to dictionary for backward compatibility
+        coefs = {var: coefs_array[:, j].tolist() for j, var in enumerate(var_names)}
         self.bootstrap_distribution = coefs
         return coefs
 
@@ -77,18 +86,28 @@ class BiasCorrectedOLS:
         Returns:
         - jackknife_distribution: dictionary of jackknifed coefficients for each variable.
         """
-        coefs = {}
-        progress = tqdm(self.df.index, desc="Jackknife running...") if self.verbose else self.df.index
-        first_iter = True
+        # Get indices and run one iteration to determine variable names
+        indices = self.df.index.tolist()
+        n = len(indices)
+        
+        # First iteration to get variable names
+        jack_df = self.df.drop(indices[0])
+        jack_model = sm.OLS.from_formula(self.formula, jack_df, missing='drop').fit()
+        var_names = jack_model.params.index.tolist()
+        n_vars = len(var_names)
+        
+        # Pre-allocate numpy arrays for better performance
+        coefs_array = np.zeros((n, n_vars))
+        coefs_array[0] = jack_model.params.values
+        
+        progress = tqdm(range(1, n), desc="Jackknife running...") if self.verbose else range(1, n)
         for i in progress:
-            jack_df = self.df.drop(i)
+            jack_df = self.df.drop(indices[i])
             jack_model = sm.OLS.from_formula(self.formula, jack_df, missing='drop').fit()
-            jack_coef = jack_model.params
-            if first_iter:
-                coefs = {var: [] for var in jack_coef.index}
-                first_iter = False
-            for var in jack_coef.index:
-                coefs[var].append(jack_coef[var])
+            coefs_array[i] = jack_model.params.values
+        
+        # Convert to dictionary for backward compatibility
+        coefs = {var: coefs_array[:, j].tolist() for j, var in enumerate(var_names)}
         self.jackknife_distribution = coefs
         return coefs
 
@@ -103,12 +122,13 @@ class BiasCorrectedOLS:
         Returns:
         - ahat: float, acceleration factor.
         """
-        x = np.array(x)
-        xbar = np.mean(x)
+        x = np.asarray(x)
+        xbar = x.mean()
         y = x - xbar
-        num = np.sum(y ** 3)
-        denom = 6 * (np.sum(y ** 2) ** (3 / 2.0))
-        return num / denom
+        y2 = y * y
+        num = (y * y2).sum()  # More efficient than y**3
+        denom = 6.0 * (y2.sum() ** 1.5)  # More efficient than (sum ** (3/2))
+        return num / denom if denom != 0 else 0.0
 
     def bca_estimate(self, beta_hat, beta_boot_dist, jackknife_dist, CI_type='BCa'):
         """
@@ -125,12 +145,12 @@ class BiasCorrectedOLS:
         - bias_corrected_beta: bias-corrected estimate.
         - ci: tuple, lower and upper bounds of the chosen confidence interval.
         """
-        beta_boot_dist = np.array(beta_boot_dist)
-        bias_corrected_beta = 2 * beta_hat - np.mean(beta_boot_dist)
+        beta_boot_dist = np.asarray(beta_boot_dist)
+        bias_corrected_beta = 2 * beta_hat - beta_boot_dist.mean()
 
         if CI_type == 'BCa':  # See Hansen (2020), Chapter 10.18
             ahat = self.compute_ahat(jackknife_dist)  # acceleration factor
-            p_star = np.mean(beta_boot_dist < beta_hat)
+            p_star = (beta_boot_dist < beta_hat).mean()
             z0 = norm.ppf(p_star)
             z_low = norm.ppf(self.alpha / 2)
             z_high = norm.ppf(1 - self.alpha / 2)
@@ -140,7 +160,7 @@ class BiasCorrectedOLS:
             ci_high = np.quantile(beta_boot_dist, alpha_high)
 
         elif CI_type == 'BC':  # See Hansen (2020), eqs. (10.22) - (10.25)
-            p_star = np.mean(beta_boot_dist < beta_hat)
+            p_star = (beta_boot_dist < beta_hat).mean()
             z0 = norm.ppf(p_star)
             z_low = norm.ppf(self.alpha / 2)
             z_high = norm.ppf(1 - self.alpha / 2)
