@@ -57,7 +57,17 @@ class BiasCorrectedOLS:
         self.alpha = alpha
         self.verbose = verbose
         self.cov_type = cov_type
-        self.formula = f'{dependent_var} ~ {" + ".join(independent_vars)}'
+        # Use Q() to safely quote variable names that contain special characters
+        def quote_if_needed(name):
+            # Characters that require quoting in patsy formulas
+            special_chars = set(' +-*/()[]{}:~^')
+            if any(c in name for c in special_chars):
+                return f'Q("{name}")'
+            return name
+
+        quoted_dep = quote_if_needed(dependent_var)
+        quoted_indep = [quote_if_needed(v) for v in independent_vars]
+        self.formula = f'{quoted_dep} ~ {" + ".join(quoted_indep)}'
         self.model = None
         self.coefs = None
         self.conf = None
