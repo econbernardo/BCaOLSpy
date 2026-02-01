@@ -83,7 +83,7 @@ class BiasCorrectedOLS:
         - desc: str, description to display in tqdm for bootstrapping.
 
         Returns:
-        - bootstrap_distribution: dictionary of bootstrapped coefficients for each variable.
+        - bootstrap_distribution: dict mapping variable names to numpy arrays of bootstrapped coefficients.
         """
         if not isinstance(n_sim, int) or n_sim < 1:
             raise ValueError("n_sim must be a positive integer")
@@ -107,8 +107,8 @@ class BiasCorrectedOLS:
             model = sm.OLS.from_formula(self.formula, bootstrap_df, missing='drop').fit()
             coefs_array[i] = model.params.values
         
-        # Convert to dictionary for backward compatibility
-        coefs = {var: coefs_array[:, j].tolist() for j, var in enumerate(var_names)}
+        # Store as dictionary of numpy arrays for memory efficiency
+        coefs = {var: coefs_array[:, j] for j, var in enumerate(var_names)}
         self.bootstrap_distribution = coefs
         return coefs
 
@@ -117,7 +117,7 @@ class BiasCorrectedOLS:
         Perform jackknife resampling to obtain the distribution of the OLS estimates.
 
         Returns:
-        - jackknife_distribution: dictionary of jackknifed coefficients for each variable.
+        - jackknife_distribution: dict mapping variable names to numpy arrays of jackknifed coefficients.
         """
         # Get indices and run one iteration to determine variable names
         indices = self.df.index.tolist()
@@ -139,8 +139,8 @@ class BiasCorrectedOLS:
             jack_model = sm.OLS.from_formula(self.formula, jack_df, missing='drop').fit()
             coefs_array[i] = jack_model.params.values
         
-        # Convert to dictionary for backward compatibility
-        coefs = {var: coefs_array[:, j].tolist() for j, var in enumerate(var_names)}
+        # Store as dictionary of numpy arrays for memory efficiency
+        coefs = {var: coefs_array[:, j] for j, var in enumerate(var_names)}
         self.jackknife_distribution = coefs
         return coefs
 
