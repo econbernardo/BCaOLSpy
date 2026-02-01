@@ -226,3 +226,46 @@ class BiasCorrectedOLS:
             raise NotImplementedError(f"Confidence interval type {CI_type} not implemented.")
 
         return beta_hat, bias_corrected_beta, (ci_low, ci_high)
+
+    def compute_all_bca(self, CI_type='BCa'):
+        """
+        Compute BCa confidence intervals for all coefficients.
+
+        Convenience method that computes bias-corrected estimates and confidence
+        intervals for all regression coefficients using stored bootstrap and
+        jackknife distributions.
+
+        Parameters:
+        - CI_type: str, type of confidence interval ('BCa', 'BC', 'perc').
+
+        Returns:
+        - results: pandas.DataFrame with columns:
+            - 'coef': original OLS coefficient
+            - 'bias_corrected': bias-corrected coefficient
+            - 'ci_low': lower bound of confidence interval
+            - 'ci_high': upper bound of confidence interval
+        """
+        if self.coefs is None:
+            raise RuntimeError("run_regression() must be called first")
+        if self.bootstrap_distribution is None:
+            raise RuntimeError("perform_bootstrap() must be called first")
+        if self.jackknife_distribution is None:
+            raise RuntimeError("perform_jackknife() must be called first")
+
+        results = []
+        for var in self.coefs.index:
+            beta_hat = self.coefs[var]
+            boot_dist = self.bootstrap_distribution[var]
+            jack_dist = self.jackknife_distribution[var]
+
+            _, bias_corrected, (ci_low, ci_high) = self.bca_estimate(
+                beta_hat, boot_dist, jack_dist, CI_type=CI_type
+            )
+            results.append({
+                'coef': beta_hat,
+                'bias_corrected': bias_corrected,
+                'ci_low': ci_low,
+                'ci_high': ci_high
+            })
+
+        return pd.DataFrame(results, index=self.coefs.index)
