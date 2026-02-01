@@ -151,6 +151,12 @@ class BiasCorrectedOLS:
         if CI_type == 'BCa':  # See Hansen (2020), Chapter 10.18
             ahat = self.compute_ahat(jackknife_dist)  # acceleration factor
             p_star = (beta_boot_dist < beta_hat).mean()
+            if p_star == 0 or p_star == 1:
+                raise ValueError(
+                    f"Bootstrap distribution is degenerate (p_star={p_star}). "
+                    "All bootstrap estimates are on one side of beta_hat. "
+                    "Try increasing n_sim or check for data issues."
+                )
             z0 = norm.ppf(p_star)
             z_low = norm.ppf(self.alpha / 2)
             z_high = norm.ppf(1 - self.alpha / 2)
@@ -161,6 +167,12 @@ class BiasCorrectedOLS:
 
         elif CI_type == 'BC':  # See Hansen (2020), eqs. (10.22) - (10.25)
             p_star = (beta_boot_dist < beta_hat).mean()
+            if p_star == 0 or p_star == 1:
+                raise ValueError(
+                    f"Bootstrap distribution is degenerate (p_star={p_star}). "
+                    "All bootstrap estimates are on one side of beta_hat. "
+                    "Try increasing n_sim or check for data issues."
+                )
             z0 = norm.ppf(p_star)
             z_low = norm.ppf(self.alpha / 2)
             z_high = norm.ppf(1 - self.alpha / 2)
