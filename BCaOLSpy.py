@@ -204,8 +204,16 @@ class BiasCorrectedOLS:
             z0 = norm.ppf(p_star)
             z_low = norm.ppf(self.alpha / 2)
             z_high = norm.ppf(1 - self.alpha / 2)
-            alpha_low = norm.cdf(z0 + (z_low + z0) / (1 - ahat * (z_low + z0)))
-            alpha_high = norm.cdf(z0 + (z_high + z0) / (1 - ahat * (z_high + z0)))
+            denom_low = 1 - ahat * (z_low + z0)
+            denom_high = 1 - ahat * (z_high + z0)
+            if denom_low == 0 or denom_high == 0:
+                raise ValueError(
+                    f"BCa formula has division by zero (ahat={ahat:.6f}, z0={z0:.6f}). "
+                    "The acceleration factor is too extreme for this data. "
+                    "Consider using CI_type='BC' or 'perc' instead."
+                )
+            alpha_low = norm.cdf(z0 + (z_low + z0) / denom_low)
+            alpha_high = norm.cdf(z0 + (z_high + z0) / denom_high)
             ci_low = np.quantile(beta_boot_dist, alpha_low)
             ci_high = np.quantile(beta_boot_dist, alpha_high)
 
