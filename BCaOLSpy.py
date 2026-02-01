@@ -5,7 +5,8 @@ from scipy.stats import norm
 from tqdm import tqdm
 
 class BiasCorrectedOLS:
-    def __init__(self, df, dependent_var, independent_vars, alpha=0.05, verbose=True, random_state=None):
+    def __init__(self, df, dependent_var, independent_vars, alpha=0.05, verbose=True,
+                 random_state=None, cov_type='HC0'):
         """
         Initialize the BiasCorrectedOLS object.
 
@@ -16,6 +17,7 @@ class BiasCorrectedOLS:
         - alpha: float, significance level for confidence intervals (default=0.05).
         - verbose: bool, if True, display progress using tqdm for bootstrapping and jackknife methods.
         - random_state: int, numpy.random.Generator, or None. Controls randomness for reproducibility.
+        - cov_type: str, type of heteroscedasticity-robust covariance ('HC0', 'HC1', 'HC2', 'HC3').
         """
         # Input validation
         if not isinstance(df, pd.DataFrame):
@@ -35,6 +37,9 @@ class BiasCorrectedOLS:
             raise ValueError(f"independent_vars not found in DataFrame columns: {missing_vars}")
         if not isinstance(alpha, (int, float)) or not (0 < alpha < 1):
             raise ValueError("alpha must be a number between 0 and 1 (exclusive)")
+        valid_cov_types = ('HC0', 'HC1', 'HC2', 'HC3')
+        if cov_type not in valid_cov_types:
+            raise ValueError(f"cov_type must be one of {valid_cov_types}")
 
         # Set up random number generator for reproducibility
         if random_state is None:
@@ -51,6 +56,7 @@ class BiasCorrectedOLS:
         self.independent_vars = independent_vars
         self.alpha = alpha
         self.verbose = verbose
+        self.cov_type = cov_type
         self.formula = f'{dependent_var} ~ {" + ".join(independent_vars)}'
         self.model = None
         self.coefs = None
@@ -68,7 +74,7 @@ class BiasCorrectedOLS:
         - conf: confidence intervals for the estimated coefficients.
         - nobs: number of observations used in the regression.
         """
-        model = sm.OLS.from_formula(self.formula, self.df, missing='drop').fit(cov_type='HC0')
+        model = sm.OLS.from_formula(self.formula, self.df, missing='drop').fit(cov_type=self.cov_type)
         self.coefs = model.params
         self.conf = model.conf_int(alpha=self.alpha)
         self.nobs = model.nobs
