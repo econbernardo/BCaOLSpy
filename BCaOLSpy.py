@@ -89,7 +89,7 @@ class BiasCorrectedOLS:
         coefs_array = np.zeros((n_sim, n_vars))
         coefs_array[0] = model.params.values
         
-        progress = tqdm(range(1, n_sim), desc=desc, total=n_sim, initial=1) if self.verbose else range(1, n_sim)
+        progress = tqdm(range(1, n_sim), desc=desc, total=n_sim, initial=1, ascii=" ▖▘▝▗▚▞█") if self.verbose else range(1, n_sim)
         for i in progress:
             bootstrap_indices = np.random.choice(n, size=n, replace=True)
             bootstrap_df = self.df.iloc[bootstrap_indices]
@@ -122,7 +122,7 @@ class BiasCorrectedOLS:
         coefs_array = np.zeros((n, n_vars))
         coefs_array[0] = jack_model.params.values
         
-        progress = tqdm(range(1, n), desc="Jackknife running...", total=n, initial=1) if self.verbose else range(1, n)
+        progress = tqdm(range(1, n), desc="Jackknife running...", total=n, initial=1, ascii=" ▖▘▝▗▚▞█") if self.verbose else range(1, n)
         for i in progress:
             jack_df = self.df.drop(indices[i])
             jack_model = sm.OLS.from_formula(self.formula, jack_df, missing='drop').fit()
