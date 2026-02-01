@@ -87,6 +87,8 @@ class BiasCorrectedOLS:
         """
         if not isinstance(n_sim, int) or n_sim < 1:
             raise ValueError("n_sim must be a positive integer")
+        if self.coefs is None:
+            raise RuntimeError("run_regression() must be called before perform_bootstrap()")
 
         # Run one iteration to get variable names and pre-allocate arrays
         n = len(self.df)
@@ -119,6 +121,9 @@ class BiasCorrectedOLS:
         Returns:
         - jackknife_distribution: dict mapping variable names to numpy arrays of jackknifed coefficients.
         """
+        if self.coefs is None:
+            raise RuntimeError("run_regression() must be called before perform_jackknife()")
+
         # Get indices and run one iteration to determine variable names
         indices = self.df.index.tolist()
         n = len(indices)
