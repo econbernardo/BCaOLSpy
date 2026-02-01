@@ -1,0 +1,30 @@
+[project]
+name = "BCaOLSpy"
+version = "0.1.0"
+description = "Bias-Corrected and Accelerated (BCa) confidence intervals for OLS regression"
+readme = "readme.md"
+license = {text = "MIT"}
+requires-python = ">=3.9"
+dependencies = [
+    "pandas>=2.0.0",
+    "numpy>=1.24.0",
+    "statsmodels>=0.14.0",
+    "scipy>=1.10.0",
+    "tqdm>=4.60.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+
+[tool.coverage.run]
+source = ["BCaOLSpy"]
+omit = ["tests/*"]
