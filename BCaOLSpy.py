@@ -5,7 +5,7 @@ from scipy.stats import norm
 from tqdm import tqdm
 
 class BiasCorrectedOLS:
-    def __init__(self, df, dependent_var, independent_vars, alpha=0.05, verbose=True):
+    def __init__(self, df, dependent_var, independent_vars, alpha=0.05, verbose=True, random_state=None):
         """
         Initialize the BiasCorrectedOLS object.
 
@@ -15,6 +15,7 @@ class BiasCorrectedOLS:
         - independent_vars: list of str, names of the independent variables.
         - alpha: float, significance level for confidence intervals (default=0.05).
         - verbose: bool, if True, display progress using tqdm for bootstrapping and jackknife methods.
+        - random_state: int, numpy.random.Generator, or None. Controls randomness for reproducibility.
         """
         # Input validation
         if not isinstance(df, pd.DataFrame):
@@ -34,6 +35,16 @@ class BiasCorrectedOLS:
             raise ValueError(f"independent_vars not found in DataFrame columns: {missing_vars}")
         if not isinstance(alpha, (int, float)) or not (0 < alpha < 1):
             raise ValueError("alpha must be a number between 0 and 1 (exclusive)")
+
+        # Set up random number generator for reproducibility
+        if random_state is None:
+            self._rng = np.random.default_rng()
+        elif isinstance(random_state, int):
+            self._rng = np.random.default_rng(random_state)
+        elif isinstance(random_state, np.random.Generator):
+            self._rng = random_state
+        else:
+            raise TypeError("random_state must be None, an int, or a numpy.random.Generator")
 
         self.df = df
         self.dependent_var = dependent_var
@@ -79,19 +90,19 @@ class BiasCorrectedOLS:
 
         # Run one iteration to get variable names and pre-allocate arrays
         n = len(self.df)
-        bootstrap_indices = np.random.choice(n, size=n, replace=True)
+        bootstrap_indices = self._rng.choice(n, size=n, replace=True)
         bootstrap_df = self.df.iloc[bootstrap_indices]
         model = sm.OLS.from_formula(self.formula, bootstrap_df, missing='drop').fit()
         var_names = model.params.index.tolist()
         n_vars = len(var_names)
-        
+
         # Pre-allocate numpy arrays for better performance
         coefs_array = np.zeros((n_sim, n_vars))
         coefs_array[0] = model.params.values
-        
+
         progress = tqdm(range(1, n_sim), desc=desc, total=n_sim, initial=1, ascii=" ▖▘▝▗▚▞█") if self.verbose else range(1, n_sim)
         for i in progress:
-            bootstrap_indices = np.random.choice(n, size=n, replace=True)
+            bootstrap_indices = self._rng.choice(n, size=n, replace=True)
             bootstrap_df = self.df.iloc[bootstrap_indices]
             model = sm.OLS.from_formula(self.formula, bootstrap_df, missing='drop').fit()
             coefs_array[i] = model.params.values
