@@ -16,6 +16,25 @@ class BiasCorrectedOLS:
         - alpha: float, significance level for confidence intervals (default=0.05).
         - verbose: bool, if True, display progress using tqdm for bootstrapping and jackknife methods.
         """
+        # Input validation
+        if not isinstance(df, pd.DataFrame):
+            raise TypeError("df must be a pandas DataFrame")
+        if len(df) == 0:
+            raise ValueError("df cannot be empty")
+        if not isinstance(dependent_var, str):
+            raise TypeError("dependent_var must be a string")
+        if dependent_var not in df.columns:
+            raise ValueError(f"dependent_var '{dependent_var}' not found in DataFrame columns")
+        if not isinstance(independent_vars, list) or not all(isinstance(v, str) for v in independent_vars):
+            raise TypeError("independent_vars must be a list of strings")
+        if len(independent_vars) == 0:
+            raise ValueError("independent_vars cannot be empty")
+        missing_vars = [v for v in independent_vars if v not in df.columns]
+        if missing_vars:
+            raise ValueError(f"independent_vars not found in DataFrame columns: {missing_vars}")
+        if not isinstance(alpha, (int, float)) or not (0 < alpha < 1):
+            raise ValueError("alpha must be a number between 0 and 1 (exclusive)")
+
         self.df = df
         self.dependent_var = dependent_var
         self.independent_vars = independent_vars
@@ -55,6 +74,9 @@ class BiasCorrectedOLS:
         Returns:
         - bootstrap_distribution: dictionary of bootstrapped coefficients for each variable.
         """
+        if not isinstance(n_sim, int) or n_sim < 1:
+            raise ValueError("n_sim must be a positive integer")
+
         # Run one iteration to get variable names and pre-allocate arrays
         n = len(self.df)
         bootstrap_indices = np.random.choice(n, size=n, replace=True)
